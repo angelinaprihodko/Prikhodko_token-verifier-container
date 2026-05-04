@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'verifier.apps.VerifierConfig',
+    'sslserver',
 ]
 
 MIDDLEWARE = [
@@ -128,3 +129,8 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# Настройки HTTPS (добавлены в версии 2.0)
+# SECURE_SSL_REDIRECT = True  # Закомментировано для Replit
+SECURE_HSTS_SECONDS = 31536000
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
