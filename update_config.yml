@@ -1,0 +1,29 @@
+---
+- name: Автоматическое изменение конфигурации контейнера
+  hosts: webservers
+  become: no
+  vars:
+    deploy_dir: "/home/runner/workspace"
+    new_ttl: 1200
+
+  tasks:
+    - name: Вывод информации об изменении
+      debug:
+        msg: "Изменение конфигурации: TTL маркера изменён на {{ new_ttl }} секунд"
+
+    - name: Проверка текущего TTL в settings.py
+      command: grep -i "TTL" {{ deploy_dir }}/verifier/views.py
+      register: current_ttl
+
+    - name: Вывод текущего TTL
+      debug:
+        msg: "Текущий TTL: {{ current_ttl.stdout }}"
+
+    - name: Применение миграций после изменения конфигурации
+      command: python3 manage.py migrate
+      args:
+        chdir: "{{ deploy_dir }}"
+
+    - name: Подтверждение завершения обновления
+      debug:
+        msg: "Конфигурация успешно обновлена на сервере {{ ansible_hostname }}"

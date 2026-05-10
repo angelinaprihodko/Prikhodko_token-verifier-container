@@ -1,0 +1,37 @@
+---
+- name: Развёртывание контейнера верификации маркеров
+  hosts: webservers
+  become: no
+  vars:
+    deploy_dir: "/home/runner/workspace"
+
+  tasks:
+    - name: Проверка наличия Python
+      command: python3 --version
+      register: python_version
+
+    - name: Вывод версии Python
+      debug:
+        msg: "Python версия: {{ python_version.stdout }}"
+
+    - name: Проверка наличия Django
+      command: python3 -m django --version
+      register: django_version
+
+    - name: Вывод версии Django
+      debug:
+        msg: "Django версия: {{ django_version.stdout }}"
+
+    - name: Проверка файла settings.py
+      stat:
+        path: "{{ deploy_dir }}/django_project/settings.py"
+      register: settings_file
+
+    - name: Вывод статуса settings.py
+      debug:
+        msg: "settings.py существует: {{ settings_file.stat.exists }}"
+
+    - name: Применение миграций
+      command: python3 manage.py migrate
+      args:
+        chdir: "{{ deploy_dir }}"
