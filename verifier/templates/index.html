@@ -1,36 +1,12 @@
 <!DOCTYPE html>
-<!-- 
-
-ШАБЛОН: Контейнер верификации маркеров аутентификации
-РАЗРАБОТЧИК: Приходько А.Р.
-ВЕРСИЯ: 1.0
-НАЗНАЧЕНИЕ:
-  Веб-интерфейс компонента интеграции для проверки подлинности маркеров 
-  аутентификации. Реализует трёхуровневую верификацию:
-    Уровень 1 — проверка структуры маркера (формат и декодирование base64)
-    Уровень 2 — проверка целостности (HMAC-SHA256 или SHA-256 подпись)
-    Уровень 3 — проверка срока действия (iat/exp относительно серверного времени)
-
-ИСПОЛЬЗУЕМЫЕ ТЕХНОЛОГИИ:
-  - Django 5.0 (Python-фреймворк)
-  - SymPy (символьные вычисления формул метрик)
-  - Matplotlib (построение графиков)
-  - HTML5 + CSS3 (интерфейс)
-ОСОБЕННОСТИ:
-  - Выпадающий список содержит 10 образцов маркеров с разными типами нарушений
-  - Пользователь не видит тип маркера заранее (имитация реальной системы)
-  - Графики обновляются динамически после каждой проверки
-  - TTL маркера фиксирован (600 сек согласно ГОСТ)
--->
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <title>Контейнер верификации маркеров — Приходько А.Р.</title>
     <style>
-        /* Базовые стили: строгий дизайн для банковской/корпоративной системы */
         * { box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', DejaVu Sans, Arial, sans-serif;
+            font-family: 'Segoe UI', Arial, sans-serif;
             margin: 0; padding: 20px;
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             min-height: 100vh;
@@ -49,7 +25,6 @@
         .header .info { color: #2980b9; font-size: 12px; margin-top: 3px; }
 
         label { font-weight: 600; color: #2c3e50; display: block; margin: 10px 0 4px; }
-        /* Поля ввода и выбора: моноширинный шрифт для маркеров */
         select, textarea {
             width: 100%; padding: 10px 12px; border: 2px solid #dcdde1; border-radius: 6px;
             font-size: 13px; font-family: 'Courier New', monospace;
@@ -58,30 +33,21 @@
         select:focus, textarea:focus { border-color: #3498db; outline: none; }
         textarea { height: 55px; resize: vertical; }
 
-        /* Кнопка проверки: синий цвет корпоративного стиля */
         button {
             margin-top: 12px; padding: 12px 28px;
             background: #2980b9; color: white; border: none; border-radius: 6px;
             font-size: 15px; font-weight: 600; cursor: pointer;
-            transition: background 0.3s, transform 0.1s;
+            transition: background 0.3s;
         }
         button:hover { background: #2471a3; }
-        button:active { transform: scale(0.98); }
 
-        /* Блок результата: зелёный — успех, красный — блокировка */
         .result {
             margin: 20px 0; padding: 18px; border-radius: 8px; font-size: 15px;
             border-left: 6px solid;
         }
-        .result.valid {
-            background: #eafaf1; border-color: #2ecc71; color: #1e8449;
-        }
-        .result.invalid {
-            background: #fdedec; border-color: #e74c3c; color: #922b21;
-        }
-        .result .status-icon { font-size: 20px; margin-right: 8px; }
+        .result.valid { background: #eafaf1; border-color: #2ecc71; color: #1e8449; }
+        .result.invalid { background: #fdedec; border-color: #e74c3c; color: #922b21; }
 
-        /* Графики: светлый фон для контраста */
         .charts-section { margin-top: 25px; }
         .charts-section h2 { color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 8px; }
         .chart-box {
@@ -95,71 +61,53 @@
 </head>
 <body>
 <div class="container">
-    <!-- Заголовок приложения -->
+
+    <!-- Заголовок -->
     <div class="header">
         <h1>КОНТЕЙНЕР ВЕРИФИКАЦИИ МАРКЕРОВ АУТЕНТИФИКАЦИИ</h1>
         <div class="subtitle">Компонент интеграции: контроль подлинности маркера</div>
         <div class="info">TTL = 600 сек (согласно ГОСТ) | Разработчик: Приходько А.Р.</div>
     </div>
 
-    <!-- 
-    ФОРМА ВВОДА МАРКЕРА:
-    - Выпадающий список (select) содержит 10 образцов маркеров
-    - Поле textarea позволяет ввести любой маркер вручную
-    - При выборе из списка JavaScript копирует значение в textarea
-    -->
+    <!-- Форма ввода маркера -->
     <form method="POST">
         {% csrf_token %}
-        <!-- Django-тег csrf_token для защиты от межсайтовой подделки запроса -->
 
         <label for="token-select">ВЫБОР МАРКЕРА ИЗ БАЗЫ (тестовые образцы):</label>
         <select id="token-select" onchange="document.getElementById('token-input').value = this.value">
             <option value="">— выберите маркер —</option>
             {% for item in sample_tokens %}
-            <!-- Переменная sample_tokens передаётся из views.py -->
             <option value="{{ item.token }}" {% if input_token == item.token %}selected{% endif %}>{{ item.label }}</option>
             {% endfor %}
         </select>
 
         <label for="token-input">РУЧНОЙ ВВОД МАРКЕРА:</label>
         <textarea id="token-input" name="token" placeholder="Вставьте маркер в формате: <payload>.<signature>">{{ input_token }}</textarea>
-        <!-- Переменная input_token сохраняет введённое значение после отправки формы -->
 
         <button type="submit">🔍 ПРОВЕРИТЬ МАРКЕР</button>
     </form>
 
-    <!-- 
-    БЛОК РЕЗУЛЬТАТА ПРОВЕРКИ:
-    Отображается только если check_result не пустой.
-    Класс valid/invalid определяется полем check_result.valid
-    -->
+    <!-- Результат проверки -->
     {% if check_result %}
     <div class="result {% if check_result.valid %}valid{% else %}invalid{% endif %}">
-        <span class="status-icon">{% if check_result.valid %}✅{% else %}🚫{% endif %}</span>
+        <span>{% if check_result.valid %}✅{% else %}🚫{% endif %}</span>
         <b>Результат верификации:</b> {{ check_result.reason }}<br>
         <b>Статус доступа:</b> {% if check_result.valid %}ДОСТУП РАЗРЕШЁН{% else %}ДОСТУП ЗАБЛОКИРОВАН — обнаружена угроза подмены субъекта доступа{% endif %}
 
         {% if check_result.payload %}
-        <!-- Если маркер прошёл уровень 1, выводим содержимое -->
         <br><b>ID субъекта:</b> {{ check_result.payload.user_id }} | <b>Роль:</b> {{ check_result.payload.role }}
         <br><b>Время выпуска (iat):</b> {{ check_result.payload.iat }} | <b>Истечение (exp):</b> {{ check_result.payload.exp }}
         <br><b>Текущее время сервера:</b> {{ check_result.current_time }}
         {% endif %}
 
         {% if check_result.details %}
-        <!-- Детали заключения: причина блокировки или срок действия -->
         <br><b>Детали заключения:</b> {{ check_result.details }}
         {% endif %}
     </div>
     {% endif %}
 
-    <!-- 
-    ГРАФИКИ:
-    График 1 — столбцы прохождения уровней (пройден/заблокирован)
-    График 2 — матрица прохождения уровней (как в задании)
-    График 3 — временная шкала (iat, exp, now)
-    Изображения в формате base64 передаются из views.py
-    -->
+    <!-- Графики -->
+    {% if chart1 and chart2 and chart3 %}
     <div class="charts-section">
         <h2>ГРАФИКИ АНАЛИЗА МАРКЕРА</h2>
         <div class="chart-box">
@@ -172,6 +120,7 @@
             <img src="data:image/png;base64,{{ chart3 }}" alt="Временная шкала">
         </div>
     </div>
+    {% endif %}
 
     <div class="footer">
         Контейнер верификации маркеров аутентификации v1.0 | Приходько А.Р. | 2026
