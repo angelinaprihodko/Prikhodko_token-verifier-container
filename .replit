@@ -1,19 +1,29 @@
+# Блок 1. Команда запуска Django-сервера в среде Replit
 run = ["python", "manage.py", "runserver", "0.0.0.0:3000"]
+
+# Блок 2. Точка входа проекта
 entrypoint = "manage.py"
+
+# Блок 3. Версия Python-модуля среды Replit
 modules = ["python-3.10:v18-20230807-322e88b"]
 
+# Блок 4. Скрытые служебные папки
 hidden = [".pythonlibs"]
 
+# Блок 5. Канал Nix для системного окружения
 [nix]
 channel = "stable-24_05"
 
+# Блок 6. Настройки модульного тестирования
 [unitTest]
 language = "python3"
 
+# Блок 7. Параметры развёртывания приложения
 [deployment]
 run = ["python", "manage.py", "runserver", "0.0.0.0:3000"]
 deploymentTarget = "gce"
 
+# Блок 8. Сопоставление портов
 [[ports]]
 localPort = 443
 externalPort = 3000
@@ -22,5 +32,6 @@ externalPort = 3000
 localPort = 3000
 externalPort = 80
 
+# Блок 9. Экспертный режим агента Replit
 [agent]
 expertMode = true
