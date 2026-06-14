@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+
+  # Контейнер 1: nginx — обратный прокси
+  nginx:
+    image: nginx:latest
+    container_name: nginx_proxy
+    ports:
+      - "80:80"
+    depends_on:
+      - verifier
+    networks:
+      - app_network
+
+  # Контейнер 2: verifier — контейнер безопасности
+  verifier:
+    build: .
+    container_name: security_verifier
+    ports:
+      - "8001:8001"
+    networks:
+      - app_network
+
+  # Контейнер 3: Prometheus — сбор метрик
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - verifier
+    networks:
+      - app_network
+
+  # Контейнер 4: Grafana — визуализация метрик
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
